@@ -17,21 +17,17 @@
     <script>
        const peer = new Peer({
             config: {
-                iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:://twilio.com' },
-                    // If you get a free TURN server, add it here:
-                    // { 
-                    //   urls: 'turn:your-turn-server.com:3478', 
-                    //   username: 'your-username', 
-                    //   credential: 'your-password' 
-                    // }
+                'iceServers': [
+                    { urls: 'stun:://google.com' },
+                    { 
+                        urls: 'turn:relay.metered.ca:443', 
+                        username: 'metered', 
+                        credential: 'password' 
+                    }
                 ],
-                // Helps avoid some 30-second hang issues
-                iceCandidatePoolSize: 10
+                'iceTransportPolicy': 'relay' // THIS FORCES IT TO WORK THROUGH FIREWALLS
             }
         });
-
         // Monitor the connection to the signaling server
         peer.on('disconnected', () => {
             console.log("Connection lost. Attempting to reconnect...");
