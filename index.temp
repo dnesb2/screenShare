@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PeerJS Test</title>
+    <!-- Import PeerJS Library -->
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+</head>
+<body>
+    <h1>Check your console (F12)</h1>
+    <script>
+        
+//The Peer object is where we create and receive connections.
+        var peer = new Peer();
+        
+//Every Peer object is assigned a random, unique ID when it's created.
+        peer.on("open", function (id) {
+            console.log("My peer ID is: " + id);
+        });
+
+	// Call a peer, providing our mediaStream
+	peer.on("call", function (call) {
+  	// Answer the call, providing our mediaStream
+  		call.answer(mediaStream);
+	});
+    </script>
+</body>
+</html>
+
+
+
+
+
