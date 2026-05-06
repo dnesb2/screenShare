@@ -15,7 +15,14 @@
     </div>
 
     <script>
-        const peer = new Peer();
+       const peer = new Peer({
+            config: {
+                'iceServers': [
+                    { url: 'stun:://google.com' },
+                    { url: 'stun:://google.com' }
+                ]
+            }
+        });
         let localStream;
 
         // 1. Get SCREEN capture instead of camera
