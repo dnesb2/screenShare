@@ -1,70 +1,71 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>PeerJS Video Call</title>
-    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <title>PeerJS Secure Screen Share</title>
+    <script src="https://unpkg.com"></script>
 </head>
 <body>
     <h3>Your ID: <span id="my-id">...</span></h3>
-    <input type="text" id="remote-id" placeholder="Remote Peer ID">
-    <button onclick="startCall()">Call</button>
+    <input type="text" id="remote-id" placeholder="Paste Remote ID here">
+    <!-- CRITICAL: User must click a button to share screen on HTTPS -->
+    <button onclick="makeCall()">Start Screen Share Call</button>
 
     <div style="display: flex; gap: 10px; margin-top: 20px;">
-        <div><p>Local</p><video id="local-video" width="300" autoplay muted></video></div>
-        <div><p>Remote</p><video id="remote-video" width="300" autoplay></video></div>
+        <div><p>Local Screen</p><video id="local-video" width="400" autoplay muted></video></div>
+        <div><p>Remote Screen</p><video id="remote-video" width="400" autoplay></video></div>
     </div>
 
     <script>
-       // 1. Setup Peer with HTTPS settings
+        // 1. Force PeerJS to use Secure HTTPS settings for GitHub Pages
         const peer = new Peer({
-            secure: true, 
+            secure: true,
             port: 443,
             config: {
-                iceServers: [{ urls: 'stun:://google.com' }]
+                iceServers: [
+                    { urls: 'stun:://google.com' },
+                    { urls: 'stun:://twilio.com' }
+                ]
             }
         });
-        
+
         let localStream;
-        
-        // 2. YOU MUST CLICK TO START (Browser Security Rule)
-        async function getStream() {
-            if (localStream) return localStream;
-            // This MUST happen inside a click event on HTTPS
-            localStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-            document.getElementById('local-video').srcObject = localStream;
-            return localStream;
-        }
-        
+
+        // 2. Display your ID when ready
         peer.on('open', id => document.getElementById("my-id").innerText = id);
-        
-        // 3. RECEIVING A CALL
-        peer.on("call", async (call) => {
-            // We must get the stream first or answering will fail
-            const stream = await getStream();
-            call.answer(stream);
-            call.on("stream", remote => {
-                document.getElementById('remote-video').srcObject = remote;
-            });
+
+        // 3. RECIEVING: Must handle incoming calls
+        peer.on('call', async (call) => {
+            if (confirm("Inbound call. Do you want to share your screen back?")) {
+                localStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                document.getElementById('local-video').srcObject = localStream;
+                call.answer(localStream);
+                setupStreamDisplay(call);
+            }
         });
-        
-        // 4. MAKING A CALL
-        async function startCall() {
+
+        // 4. CALLING: Start screen share ONLY when button is clicked
+        async function makeCall() {
             const destId = document.getElementById("remote-id").value;
-            if (!destId) return alert("Enter an ID");
-        
-            const stream = await getStream();
-            const call = peer.call(destId, stream);
-            
-            call.on("stream", remote => {
-                document.getElementById('remote-video').srcObject = remote;
-            });
+            if (!destId) return alert("Please enter a Remote ID");
+
+            try {
+                // Browser requires this inside a click event
+                localStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                document.getElementById('local-video').srcObject = localStream;
+
+                const call = peer.call(destId, localStream);
+                setupStreamDisplay(call);
+            } catch (err) {
+                alert("Screen share failed: " + err.message);
+            }
         }
 
+        function setupStreamDisplay(call) {
+            call.on('stream', (remoteStream) => {
+                document.getElementById('remote-video').srcObject = remoteStream;
+            });
+        }
     </script>
 </body>
 </html>
-
-
-
-
 
