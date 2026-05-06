@@ -15,90 +15,49 @@
     </div>
 
     <script>
-       const peer = new Peer({
+       // 1. Setup Peer with HTTPS settings
+        const peer = new Peer({
+            secure: true, 
+            port: 443,
             config: {
-                'iceServers': [
-                    { urls: 'stun:://google.com' },
-                    { 
-                        urls: 'turn:relay.metered.ca:443', 
-                        username: 'metered', 
-                        credential: 'password' 
-                    }
-                ],
-                'iceTransportPolicy': 'relay' // THIS FORCES IT TO WORK THROUGH FIREWALLS
+                iceServers: [{ urls: 'stun:://google.com' }]
             }
         });
-        // Monitor the connection to the signaling server
-        peer.on('disconnected', () => {
-            console.log("Connection lost. Attempting to reconnect...");
-            peer.reconnect();
-        });
-        
-        // Periodic Heartbeat (Keeps the connection alive)
-        setInterval(() => {
-            if (peer.open) {
-                peer.socket.send({ type: 'HEARTBEAT' });
-            }
-        }, 5000); 
         
         let localStream;
         
-        async function startCapture() {
-            try {
-                localStream = await navigator.mediaDevices.getDisplayMedia({ 
-                    video: true, 
-                    audio: true 
-                });
-                document.getElementById('local-video').srcObject = localStream;
-            } catch (err) {
-                console.error("Error sharing screen: " + err);
-            }
+        // 2. YOU MUST CLICK TO START (Browser Security Rule)
+        async function getStream() {
+            if (localStream) return localStream;
+            // This MUST happen inside a click event on HTTPS
+            localStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+            document.getElementById('local-video').srcObject = localStream;
+            return localStream;
         }
         
-        startCapture();
+        peer.on('open', id => document.getElementById("my-id").innerText = id);
         
-        peer.on("open", id => {
-            document.getElementById("my-id").innerText = id;
+        // 3. RECEIVING A CALL
+        peer.on("call", async (call) => {
+            // We must get the stream first or answering will fail
+            const stream = await getStream();
+            call.answer(stream);
+            call.on("stream", remote => {
+                document.getElementById('remote-video').srcObject = remote;
+            });
         });
         
-        // Error handling for the Peer connection
-        peer.on('error', (err) => {
-            console.error("PeerJS Error:", err.type, err);
-            alert("Peer Error: " + err.type);
-        });
-        
-        peer.on("call", call => {
-            // Only answer if we have a stream
-            if (localStream) {
-                call.answer(localStream); 
-                call.on("stream", remoteStream => {
-                    document.getElementById('remote-video').srcObject = remoteStream;
-                });
-            }
-        });
-        
-        function startCall() {
+        // 4. MAKING A CALL
+        async function startCall() {
             const destId = document.getElementById("remote-id").value;
-            
-            if (!localStream) {
-                alert("Wait for screen share to initialize");
-                return;
-            }
-            if (!destId) {
-                alert("Enter a Remote ID first");
-                return;
-            }
+            if (!destId) return alert("Enter an ID");
         
-            const call = peer.call(destId, localStream);
+            const stream = await getStream();
+            const call = peer.call(destId, stream);
             
-            // Safety check: ensure call object was created successfully
-            if (call) {
-                call.on("stream", remoteStream => {
-                    document.getElementById('remote-video').srcObject = remoteStream;
-                });
-            } else {
-                console.error("Call object was not created. Check if ID is valid.");
-            }
+            call.on("stream", remote => {
+                document.getElementById('remote-video').srcObject = remote;
+            });
         }
 
     </script>
