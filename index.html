@@ -23,12 +23,11 @@
                 ]
             }
         });
+        
         let localStream;
-
-        // 1. Get SCREEN capture instead of camera
+        
         async function startCapture() {
             try {
-                // This triggers the "Select a tab/window" popup
                 localStream = await navigator.mediaDevices.getDisplayMedia({ 
                     video: true, 
                     audio: true 
@@ -38,34 +37,51 @@
                 console.error("Error sharing screen: " + err);
             }
         }
-
-        // Start the capture prompt immediately
+        
         startCapture();
-
-        // 2. Display your ID
+        
         peer.on("open", id => {
             document.getElementById("my-id").innerText = id;
         });
-
-        // 3. ANSWER CALL: Use screen stream to answer
-        peer.on("call", call => {
-            call.answer(localStream); 
-            call.on("stream", remoteStream => {
-                document.getElementById('remote-video').srcObject = remoteStream;
-            });
+        
+        // Error handling for the Peer connection
+        peer.on('error', (err) => {
+            console.error("PeerJS Error:", err.type, err);
+            alert("Peer Error: " + err.type);
         });
-
-        // 4. START CALL: Same logic as before
+        
+        peer.on("call", call => {
+            // Only answer if we have a stream
+            if (localStream) {
+                call.answer(localStream); 
+                call.on("stream", remoteStream => {
+                    document.getElementById('remote-video').srcObject = remoteStream;
+                });
+            }
+        });
+        
         function startCall() {
             const destId = document.getElementById("remote-id").value;
+            
             if (!localStream) {
                 alert("Wait for screen share to initialize");
                 return;
             }
+            if (!destId) {
+                alert("Enter a Remote ID first");
+                return;
+            }
+        
             const call = peer.call(destId, localStream);
-            call.on("stream", remoteStream => {
-                document.getElementById('remote-video').srcObject = remoteStream;
-            });
+            
+            // Safety check: ensure call object was created successfully
+            if (call) {
+                call.on("stream", remoteStream => {
+                    document.getElementById('remote-video').srcObject = remoteStream;
+                });
+            } else {
+                console.error("Call object was not created. Check if ID is valid.");
+            }
         }
 
     </script>
