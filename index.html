@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Simple Screen Share</title>
+</head>
+<body>
+  <h2>Screen Sharing Prototype</h2>
+
+  <button onclick="startSharing()">Share Screen</button>
+  <button onclick="startViewing()">View Screen</button>
+
+  <br><br>
+  <video id="video" autoplay playsinline style="width: 80%; border: 1px solid black;"></video>
+
+  <script>
+    const ws = new WebSocket("ws://localhost:3000");
+    const pc = new RTCPeerConnection({
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+    });
+
+    const video = document.getElementById("video");
+
+    pc.ontrack = (event) => {
+      video.srcObject = event.streams[0];
+    };
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        ws.send(JSON.stringify({ candidate: event.candidate }));
+      }
+    };
+
+    ws.onmessage = async (message) => {
+      const data = JSON.parse(message.data);
+
+      if (data.offer) {
+        await pc.setRemoteDescription(data.offer);
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        ws.send(JSON.stringify({ answer }));
+      }
+
+      if (data.answer) {
+        await pc.setRemoteDescription(data.answer);
+      }
+
+      if (data.candidate) {
+        try {
+          await pc.addIceCandidate(data.candidate);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    };
+
+    async function startSharing() {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: false
+      });
+
+      stream.getTracks().forEach(track => {
+        pc.addTrack(track, stream);
+      });
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      ws.send(JSON.stringify({ offer }));
+    }
+
+    async function startViewing() {
+      // viewer just waits for offer
+      console.log("Waiting for screen...");
+    }
+  </script>
+</body>
+</html>
