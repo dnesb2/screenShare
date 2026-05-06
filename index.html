@@ -23,6 +23,19 @@
                 ]
             }
         });
+
+        // Monitor the connection to the signaling server
+        peer.on('disconnected', () => {
+            console.log("Connection lost. Attempting to reconnect...");
+            peer.reconnect();
+        });
+        
+        // Periodic Heartbeat (Keeps the connection alive)
+        setInterval(() => {
+            if (peer.open) {
+                peer.socket.send({ type: 'HEARTBEAT' });
+            }
+        }, 5000); 
         
         let localStream;
         
