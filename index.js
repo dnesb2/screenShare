@@ -1,10 +1,6 @@
-<button id="startConferenceButton">Start Video Conference</button>
-
-<script>
 document
   .getElementById("startConferenceButton")
   .addEventListener("click", function () {
     window.open("videoConference.html", "_blank");
     // toggleMiroTalk();
   });
-</script>
